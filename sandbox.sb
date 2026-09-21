@@ -1,0 +1,27 @@
+; macOS seatbelt profile for the `agy` subprocess.
+;
+; agy's print mode runs as a fully-privileged agent: it auto-approves file writes
+; and shell commands with no gating flag available (verified empirically —
+; --dangerously-skip-permissions, --sandbox and --mode plan all behave identically).
+; Since this server feeds attacker-controllable image content into that agent,
+; writes are denied outside temp dirs and agy's own state.
+;
+; Reads and network stay open: agy needs to reach its API and load its config,
+; so this profile limits persistence and tampering, not exfiltration.
+
+(version 1)
+(allow default)
+
+(deny file-write*)
+(allow file-write*
+  (subpath "/tmp")
+  (subpath "/private/tmp")
+  (subpath "/private/var/folders")
+  (subpath (param "GEMINI_DIR"))
+  (subpath (param "ANTIGRAVITY_DIR"))
+  (subpath (param "CACHE_DIR"))
+  (literal "/dev/null")
+  (literal "/dev/stdout")
+  (literal "/dev/stderr")
+  (literal "/dev/dtracehelper")
+  (regex #"^/dev/tty"))

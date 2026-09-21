@@ -1,0 +1,17 @@
+{
+  "name": "agy-vision-mcp",
+  "version": "2.0.0",
+  "description": "MCP server exposing image understanding via the Antigravity CLI (agy) Gemini models",
+  "type": "module",
+  "bin": {
+    "agy-vision-mcp": "./server.js"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ndanhkhoi/agy-vision-mcp.git"
+  },
+  "license": "MIT"
+}
