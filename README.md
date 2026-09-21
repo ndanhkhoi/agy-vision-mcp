@@ -3,6 +3,54 @@
 MCP server cho phép các model/harness **không có vision** đọc và hiểu ảnh, bằng cách gọi
 Antigravity CLI (`agy`) với model Gemini Flash.
 
+## Vì sao có MCP này
+
+Nhiều harness và model coding hiện tại **không có vision**: đưa vào một screenshot lỗi, một
+mockup Figma, hay một sơ đồ kiến trúc thì chúng không đọc được. Cách xử lý thông thường là
+người dùng phải tự mô tả lại ảnh bằng lời, hoặc mở một chat UI khác để hỏi rồi copy kết quả
+về — vừa mất ngữ cảnh vừa mất thời gian.
+
+Trong khi đó máy đã cài sẵn Antigravity CLI (`agy`) với quyền truy cập các model Gemini, mà
+Gemini vốn mạnh nhất đúng ở mảng này. Ý tưởng: **bắc cầu** — để harness không-vision gọi
+Gemini như một tool, thay vì phải đổi model hay rời khỏi phiên làm việc.
+
+### Vì sao chọn Gemini Flash
+
+**Đọc ảnh chính xác.** Trong quá trình phát triển, các test thực tế cho thấy Flash transcribe
+stack trace verbatim đúng từng ký tự, giữ nguyên indentation và số dòng; nhận ra khác biệt màu
+ở mức mã hex giữa hai ảnh UI; và đọc đúng bố cục sơ đồ. Đây là loại tác vụ mà sai một ký tự
+trong đường dẫn file hay số dòng là hỏng cả kết quả debug.
+
+**Phản hồi nhanh — đủ nhanh để dùng giữa dòng công việc.** Đo trên máy phát triển
+(macOS, OCR một ảnh stack trace 820x190, qua đúng đường MCP người dùng sẽ đi):
+
+| Cấu hình | Thời gian |
+| ------------------------------- | -------------- |
+| `agy` khởi động (prompt text, không ảnh) | 8-9s |
+| OCR với `gemini-3.8-flash-low`  | 11-14s |
+| OCR với `gemini-3.8-flash-medium` | 17-50s (trung vị ~31s) |
+
+Điểm đáng chú ý: phần **đọc và hiểu ảnh chỉ tốn ~3-5s** — phần còn lại là chi phí khởi động
+tiến trình `agy`. Bản thân Flash trả lời gần như tức thì; độ trễ đến từ lớp CLI chứ không
+phải model. Dùng `flash-low` cho OCR và các tác vụ đọc chữ; để mặc định `flash-medium` cho
+phân tích cần suy luận (diagnose lỗi, đọc sơ đồ, UI → code).
+
+> Số liệu đo trên một máy cụ thể với mạng cụ thể, mang tính tham chiếu chứ không phải benchmark.
+
+### Nguồn tham khảo
+
+- **[Z.AI Vision MCP Server](https://docs.z.ai/devpack/mcp/vision-mcp-server)** — tham khảo
+  cách thiết kế bề mặt tool. Bài học chính lấy từ đây: **tách tool theo tác vụ thay vì một tool
+  chung**, vì model chọn tool dựa trên description, nên `extract_text_from_screenshot` được gọi
+  đúng lúc mà không cần nhắc, và mỗi tool áp prompt riêng nên output có cấu trúc ổn định.
+  Repo này theo 7 tool tương ứng, **bỏ `video_analysis`** vì tool đọc file của `agy` không nhận
+  video — làm vào sẽ là tính năng giả.
+- **`agy --help` / `agy models`** — bề mặt CLI thực tế (`--print`, `--model`, `--add-dir`,
+  `--output-format`) và danh sách model khả dụng.
+- **Kiểm chứng thực nghiệm** — cơ chế permission của `agy` được xác định bằng cách chạy thử
+  từng cờ chứ không suy đoán từ tên cờ; kết quả và hệ quả bảo mật ghi ở mục
+  [Bảo mật](#bảo-mật).
+
 ## Cách hoạt động
 
 ```
